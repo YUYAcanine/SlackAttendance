@@ -19,7 +19,7 @@ def SendToSlackMessage(message):
     name_map = {"yuya":"川辺",
                 "yusei":"行平",
                 "satoshi":"稲垣",
-                "hane":"東吾"
+                "hane":"羽根"
                 }
 
     response=client.chat_postMessage(channel='work', text = name_map[message] + "出校しました")
@@ -59,7 +59,7 @@ while True:
                 best_sim = sim
                 best_match = name
                     
-        label = f"{best_match} ({best_sim:.2f})" if best_sim > 0.5 else "Unknown"
+        #label = f"{best_match} ({best_sim:.2f})" if best_sim > 0.5 else "Unknown"
 
 
         
@@ -79,14 +79,14 @@ while True:
                 SendToSlackMessage(best_match)
 
 
-        box = face.bbox.astype(int)
-        cv2.rectangle(frame, (box[0], box[1]), (box[2], box[3]), (0, 255, 0), 2)
-        cv2.putText(frame, label, (box[0], box[1] - 10),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
+        #box = face.bbox.astype(int)
+     #   cv2.rectangle(frame, (box[0], box[1]), (box[2], box[3]), (0, 255, 0), 2)
+      #  cv2.putText(frame, label, (box[0], box[1] - 10),
+       #             cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
 
-    cv2.imshow("Face Recognition", frame)
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
+#    cv2.imshow("Face Recognition", frame)
+    #if cv2.waitKey(1) & 0xFF == ord('q'):
+    #    break
 
-cap.release()
-cv2.destroyAllWindows()
+#cap.release()
+#cv2.destroyAllWindows()
