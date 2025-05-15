@@ -19,7 +19,20 @@ def SendToSlackMessage(message):
     name_map = {"yuya":"川辺",
                 "yusei":"行平",
                 "satoshi":"稲垣",
-                "hane":"東吾"
+                "hane":"羽根",
+                "handa":"半田",
+                "hashimoto":"橋本",
+                "izumitani":"泉谷",
+                "kuribayashi":"栗林",
+                "matsumoto":"松元",
+                "nishida":"西田",
+                "nomura":"野村",
+                "noto":"能登",
+                "nozaki":"能崎",
+                "ono":"大野",
+                "sano":"佐野",
+                "tanaka":"田中",
+                "tokutomi":"徳富"
                 }
 
     response=client.chat_postMessage(channel='work', text = name_map[message] + "出校しました")

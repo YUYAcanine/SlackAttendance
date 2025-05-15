@@ -17,11 +17,15 @@ for person_name in os.listdir(KNOWN_DIR):
 
     embeddings = []
     for filename in os.listdir(person_path):
-        if not filename.lower().endswith((".jpg", ".jpeg", ".png")):
+        if not filename.lower().endswith((".jpg", ".jpeg", ".png", ".JPG")):
             continue
 
         img_path = os.path.join(person_path, filename)
+
+        print(img_path)
+
         img = cv2.imread(img_path)
+        
         faces = app.get(img)
         if faces:
             embeddings.append(faces[0].embedding)
