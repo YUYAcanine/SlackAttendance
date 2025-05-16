@@ -34,8 +34,29 @@ def SendToSlackMessage(message):
                 "tanaka":"田中",
                 "tokutomi":"徳富"
                 }
+    name_map_read = {"yuya":"かわべ",
+                    "yusei":"ゆきひら",
+                    "satoshi":"いながき",
+                    "hane":"はね",
+                    "handa":"はんだ",
+                    "hashimoto":"はしもと",
+                    "izumitani":"いずみたに",
+                    "kuribayashi":"くりばやし",
+                    "matsumoto":"まつもと",
+                    "nishida":"にしだ",
+                    "nomura":"のむら",
+                    "noto":"のと",
+                    "nozaki":"のざき",
+                    "ono":"おおの",
+                    "sano":"さの",
+                    "tanaka":"たなか",
+                    "tokutomi":"とくとみ"
+                    }
 
-    response=client.chat_postMessage(channel='work', text = name_map[message] + "出校しました")
+    response=client.chat_postMessage(channel='010_lab-in', text = name_map[message] + "出校しました")
+    engine.say(name_map_read[message]+"さん、おはようございます")
+    engine.runAndWait()
+
 
 
 app = FaceAnalysis(name='buffalo_l')
@@ -45,7 +66,10 @@ app.prepare(ctx_id=0, det_size=(640, 640))
 EMBEDDING_DIR = "embeddings"
 known_faces = {}
 name_list = {}
-
+engine=pyttsx3.init()
+voices=engine.getProperty('voices')
+engine.setProperty('voice',voices[0].id)
+engine.setProperty('rate',150)
 
 for filename in os.listdir(EMBEDDING_DIR):
     if filename.endswith(".npy"):
@@ -53,7 +77,7 @@ for filename in os.listdir(EMBEDDING_DIR):
         emb = np.load(os.path.join(EMBEDDING_DIR, filename))
         known_faces[name] = emb
 
-cap = cv2.VideoCapture(1)
+cap = cv2.VideoCapture(1) #1→外部カメラ、0→内臓カメラ
 
 while True:
     ret, frame = cap.read()

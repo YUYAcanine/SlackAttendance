@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 import os
 from insightface.app import FaceAnalysis
-
+import pyttsx3
 
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
@@ -11,7 +11,7 @@ import datetime
 
 from dotenv import load_dotenv
 load_dotenv()
-SLACK_BOT_TOKEN = os.environ.get("SLACK_BOT_TOKEN")
+SLACK_BOT_TOKEN = os.environ.get("SLACK_BOT_TOKEN_TEST")
 
 def SendToSlackMessage(message):
     client = WebClient(token=SLACK_BOT_TOKEN) 
@@ -19,14 +19,51 @@ def SendToSlackMessage(message):
     name_map = {"yuya":"川辺",
                 "yusei":"行平",
                 "satoshi":"稲垣",
-                "hane":"羽根"
+                "hane":"羽根",
+                "handa":"半田",
+                "hashimoto":"橋本",
+                "izumitani":"泉谷",
+                "kuribayashi":"栗林",
+                "matsumoto":"松元",
+                "nishida":"西田",
+                "nomura":"野村",
+                "noto":"能登",
+                "nozaki":"能崎",
+                "ono":"大野",
+                "sano":"佐野",
+                "tanaka":"田中",
+                "tokutomi":"徳富"
                 }
+    
+    name_map_read = {"yuya":"かわべ",
+                    "yusei":"ゆきひら",
+                    "satoshi":"いながき",
+                    "hane":"はね",
+                    "handa":"はんだ",
+                    "hashimoto":"はしもと",
+                    "izumitani":"いずみたに",
+                    "kuribayashi":"くりばやし",
+                    "matsumoto":"まつもと",
+                    "nishida":"にしだ",
+                    "nomura":"のむら",
+                    "noto":"のと",
+                    "nozaki":"のざき",
+                    "ono":"おおの",
+                    "sano":"さの",
+                    "tanaka":"たなか",
+                    "tokutomi":"とくとみ"
+                    }
+    
 
     response=client.chat_postMessage(channel='work', text = name_map[message] + "出校しました")
+
+    engine.say(name_map_read[message]+"さん、おはようございます")
+    engine.runAndWait()
 
 
 app = FaceAnalysis(name='buffalo_l')
 app.prepare(ctx_id=0, det_size=(640, 640))
+
 
 # 全員分のベクトルを読み込む
 EMBEDDING_DIR = "embeddings"
@@ -40,8 +77,11 @@ for filename in os.listdir(EMBEDDING_DIR):
         emb = np.load(os.path.join(EMBEDDING_DIR, filename))
         known_faces[name] = emb
 
-cap = cv2.VideoCapture(1)
-
+cap = cv2.VideoCapture(0)
+engine=pyttsx3.init()
+voices=engine.getProperty('voices')
+engine.setProperty('voice',voices[0].id)
+engine.setProperty('rate',150)
 while True:
     ret, frame = cap.read()
     if not ret:
