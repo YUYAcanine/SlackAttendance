@@ -9,6 +9,8 @@ from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 import datetime
 
+import pyttsx3
+
 from dotenv import load_dotenv
 load_dotenv()
 SLACK_BOT_TOKEN = os.environ.get("SLACK_BOT_TOKEN")
