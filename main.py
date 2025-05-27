@@ -34,7 +34,8 @@ def SendToSlackMessage(message):
                 "ono":"大野",
                 "sano":"佐野",
                 "tanaka":"田中",
-                "tokutomi":"徳富"
+                "tokutomi":"徳富",
+                "kishimura":"岸村"
                 }
     name_map_read = {"yuya":"かわべ",
                     "yusei":"ゆきひら",
@@ -52,7 +53,8 @@ def SendToSlackMessage(message):
                     "ono":"おおの",
                     "sano":"さの",
                     "tanaka":"たなか",
-                    "tokutomi":"とくとみ"
+                    "tokutomi":"とくとみ",
+                    "kishimura":"きしむら"
                     }
 
     response=client.chat_postMessage(channel='010_lab-in', text = name_map[message] + "出校しました")
