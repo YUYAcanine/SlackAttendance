@@ -81,7 +81,7 @@ for filename in os.listdir(EMBEDDING_DIR):
         emb = np.load(os.path.join(EMBEDDING_DIR, filename))
         known_faces[name] = emb
 
-cap = cv2.VideoCapture(1) #1→外部カメラ、0→内臓カメラ
+cap = cv2.VideoCapture(0) #1→外部カメラ、0→内臓カメラ
 
 while True:
     ret, frame = cap.read()
