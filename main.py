@@ -36,7 +36,8 @@ def SendToSlackMessage(message):
                 "tanaka":"田中",
                 "tokutomi":"徳富",
                 "kishimura":"岸村",
-                "yoshida":"吉田"
+                "yoshida":"吉田",
+                "kondo":"近藤"
                 }
     name_map_read = {"yuya":"かわべ",
                     "yusei":"ゆきひら",
@@ -56,11 +57,12 @@ def SendToSlackMessage(message):
                     "tanaka":"たなか",
                     "tokutomi":"とくとみ",
                     "kishimura":"きしむら",
-                    "yoshida":"よしだ"
+                    "yoshida":"よしだ",
+                    "kondo":"こんどう"
                     }
 
     response=client.chat_postMessage(channel='010_lab-in', text = name_map[message] + "出校しました")
-    engine.say(name_map_read[message]+"さん、おはようございます")
+    engine.say(name_map_read[message]+"さん、おざざっす")
     engine.runAndWait()
 
 
@@ -83,7 +85,7 @@ for filename in os.listdir(EMBEDDING_DIR):
         emb = np.load(os.path.join(EMBEDDING_DIR, filename))
         known_faces[name] = emb
 
-cap = cv2.VideoCapture(0) #1→外部カメラ、0→内臓カメラ
+cap = cv2.VideoCapture(1) #1→外部カメラ、0→内臓カメラ
 
 while True:
     ret, frame = cap.read()
