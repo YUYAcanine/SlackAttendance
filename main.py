@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 load_dotenv()
 SLACK_BOT_TOKEN = os.environ.get("SLACK_BOT_TOKEN")
 
-def SendToSlackMessage(message):
+def SendToSlackMessage(message,passed_days):
     client = WebClient(token=SLACK_BOT_TOKEN) 
     
     name_map = {"yuya":"川辺",
@@ -62,7 +62,25 @@ def SendToSlackMessage(message):
                     }
 
     response=client.chat_postMessage(channel='010_lab-in', text = name_map[message] + "出校しました")
-    engine.say(name_map_read[message]+"さん、おざざっす")
+    if passed_days>3:
+        engine.say(name_map_read[message]+"さん、おひさしぶりです")
+    
+    else:
+        if datetime.datetime.now().hour<4:
+            engine.say("通報しました")
+        
+        elif datetime.datetime.now().hour<12:
+            engine.say(name_map_read[message]+"さん、おはようございます")
+        
+        elif datetime.datetime.now().hour<18:
+            engine.say(name_map_read[message]+"さん、こんにちは")
+        
+        else:
+            engine.say(name_map_read[message]+"さん、こんばんは")
+        
+
+    
+    
     engine.runAndWait()
 
 
@@ -78,6 +96,7 @@ engine=pyttsx3.init()
 voices=engine.getProperty('voices')
 engine.setProperty('voice',voices[0].id)
 engine.setProperty('rate',150)
+kidoubi=datetime.date.today()
 
 for filename in os.listdir(EMBEDDING_DIR):
     if filename.endswith(".npy"):
@@ -85,7 +104,7 @@ for filename in os.listdir(EMBEDDING_DIR):
         emb = np.load(os.path.join(EMBEDDING_DIR, filename))
         known_faces[name] = emb
 
-cap = cv2.VideoCapture(1) #1→外部カメラ、0→内臓カメラ
+cap = cv2.VideoCapture(0) #1→外部カメラ、0→内臓カメラ
 
 while True:
     ret, frame = cap.read()
@@ -115,13 +134,15 @@ while True:
         
         if best_match in name_list:
             if name_list[best_match] != datetime.date.today():
-                SendToSlackMessage(best_match)
+                passed_daytime=name_list[best_match]- datetime.date.today()
+                passed_days=passed_daytime.days
+                SendToSlackMessage(best_match,passed_days)
                 name_list[best_match] = datetime.date.today()
 
         else:
-            if best_match != "Unknown":
+            if best_match != "Unknown" and kidoubi!=datetime.date.today():
                 name_list[best_match] = datetime.date.today()
-                SendToSlackMessage(best_match)
+                SendToSlackMessage(best_match,0)
 
 
         box = face.bbox.astype(int)
