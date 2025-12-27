@@ -2,18 +2,36 @@
 import cv2
 import numpy as np
 import os
-from insightface.app import FaceAnalysis
-import pyttsx3
 
+from insightface.app import FaceAnalysis
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 import datetime
+import pyttsx3
 
+import json
+
+#GAS用
+import requests
+GAS_URL = "https://script.google.com/macros/s/AKfycbxn_qfavTwSNz9LX2XDeI_00CwLqfSlhXi__NF1QmirzR1lMWaWeLuSzp7zk1sqJo_-qA/exec"
 from dotenv import load_dotenv
 load_dotenv()
-SLACK_BOT_TOKEN = os.environ.get("SLACK_BOT_TOKEN_TEST")
+SLACK_BOT_TOKEN = os.environ.get("SLACK_BOT_TOKEN")
 
-def SendToSlackMessage(message):
+#GAS削除用（出口カメラ）
+def send_exit(name):
+    data = {
+        "event": "exit",
+        "name": name
+    }
+    requests.post(
+        GAS_URL,
+        data=json.dumps(data),
+        headers={"Content-Type": "application/json"}
+    )
+
+
+def SendToSlackMessage(message,passed_days):
     client = WebClient(token=SLACK_BOT_TOKEN) 
     
     name_map = {"yuya":"川辺",
@@ -32,9 +50,11 @@ def SendToSlackMessage(message):
                 "ono":"大野",
                 "sano":"佐野",
                 "tanaka":"田中",
-                "tokutomi":"徳富"
+                "tokutomi":"徳富",
+                "kishimura":"岸村",
+                "yoshida":"吉田",
+                "kondo":"近藤"
                 }
-    
     name_map_read = {"yuya":"かわべ",
                     "yusei":"ゆきひら",
                     "satoshi":"いながき",
@@ -51,25 +71,48 @@ def SendToSlackMessage(message):
                     "ono":"おおの",
                     "sano":"さの",
                     "tanaka":"たなか",
-                    "tokutomi":"とくとみ"
+                    "tokutomi":"とくとみ",
+                    "kishimura":"きしむら",
+                    "yoshida":"よしだ",
+                    "kondo":"こんどう"
                     }
+
+    response=client.chat_postMessage(channel='010_lab-in', text = name_map[message] + "出校しました")
+    if passed_days>3:
+        engine.say(name_map_read[message]+"さん、おひさしぶりです")
     
+    else:
+        if datetime.datetime.now().hour<4:
+            engine.say("通報しました")
+        
+        elif datetime.datetime.now().hour<12:
+            engine.say(name_map_read[message]+"さん、おはようございます")
+        
+        elif datetime.datetime.now().hour<18:
+            engine.say(name_map_read[message]+"さん、こんにちは")
+        
+        else:
+            engine.say(name_map_read[message]+"さん、こんばんは")
+        
 
-    response=client.chat_postMessage(channel='work', text = name_map[message] + "出校しました")
-
-    engine.say(name_map_read[message]+"さん、おはようございます")
+    
+    
     engine.runAndWait()
+
 
 
 app = FaceAnalysis(name='buffalo_l')
 app.prepare(ctx_id=0, det_size=(640, 640))
 
-
 # 全員分のベクトルを読み込む
 EMBEDDING_DIR = "embeddings"
 known_faces = {}
 name_list = {}
-
+engine=pyttsx3.init()
+voices=engine.getProperty('voices')
+engine.setProperty('voice',voices[0].id)
+engine.setProperty('rate',150)
+kidoubi=datetime.date.today()
 
 for filename in os.listdir(EMBEDDING_DIR):
     if filename.endswith(".npy"):
@@ -77,11 +120,8 @@ for filename in os.listdir(EMBEDDING_DIR):
         emb = np.load(os.path.join(EMBEDDING_DIR, filename))
         known_faces[name] = emb
 
-cap = cv2.VideoCapture(0)
-engine=pyttsx3.init()
-voices=engine.getProperty('voices')
-engine.setProperty('voice',voices[0].id)
-engine.setProperty('rate',150)
+cap = cv2.VideoCapture(1) #1→外部カメラ、0→内臓カメラ
+
 while True:
     ret, frame = cap.read()
     if not ret:
@@ -90,43 +130,46 @@ while True:
     faces = app.get(frame)
     for face in faces:
         emb = face.embedding
-        best_match = "Unknown"
+        best_match_exit = "Unknown"
         best_sim = 0
 
         for name, known_emb in known_faces.items():
             sim = np.dot(emb, known_emb) / (np.linalg.norm(emb) * np.linalg.norm(known_emb))
             if sim > best_sim:
                 best_sim = sim
-                best_match = name
+                best_match_exit = name
                     
-        #label = f"{best_match} ({best_sim:.2f})" if best_sim > 0.5 else "Unknown"
+        label = f"{best_match_exit} ({best_sim:.2f})" if best_sim > 0.5 else "Unknown"
 
 
         
         if best_sim < 0.5:
-            best_match = "Unknown"
+            best_match_exit = "Unknown"
 
 
         
-        if best_match in name_list:
-            if name_list[best_match] != datetime.date.today():
-                SendToSlackMessage(best_match)
-                name_list[best_match] = datetime.date.today()
+        if best_match_exit in name_list:
+            send_exit(best_match_exit) #GAS送信
+            if name_list[best_match_exit] != datetime.date.today():
+                passed_daytime=name_list[best_match_exit]- datetime.date.today()
+                passed_days=passed_daytime.days
+                #SendToSlackMessage(best_match_exit,passed_days)
+                name_list[best_match_exit] = datetime.date.today()
 
         else:
-            if best_match != "Unknown":
-                name_list[best_match] = datetime.date.today()
-                SendToSlackMessage(best_match)
+            if best_match_exit != "Unknown": #and kidoubi!=datetime.date.today():
+                name_list[best_match_exit] = datetime.date.today()
+                #SendToSlackMessage(best_match_exit,0)
+                send_exit(best_match_exit) #GAS送信
 
+        box = face.bbox.astype(int)
+        cv2.rectangle(frame, (box[0], box[1]), (box[2], box[3]), (0, 255, 0), 2)
+        cv2.putText(frame, label, (box[0], box[1] - 10),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
 
-        #box = face.bbox.astype(int)
-     #   cv2.rectangle(frame, (box[0], box[1]), (box[2], box[3]), (0, 255, 0), 2)
-      #  cv2.putText(frame, label, (box[0], box[1] - 10),
-       #             cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
+    cv2.imshow("Face Recognition", frame)
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
 
-#    cv2.imshow("Face Recognition", frame)
-    #if cv2.waitKey(1) & 0xFF == ord('q'):
-    #    break
-
-#cap.release()
-#cv2.destroyAllWindows()
+cap.release()
+cv2.destroyAllWindows()

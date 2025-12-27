@@ -11,16 +11,24 @@ import pyttsx3
 
 #GAS用
 import requests
-GAS_URL = "https://script.google.com/macros/s/AKfycbwWW8g6TfqTXBWZwBukdZx8zdyBBvE8z-ViykzsvIKGk9qlayrzIyy4k_wHwm1QKze66w/exec"
+import json
+
+GAS_URL = "https://script.google.com/macros/s/AKfycbxn_qfavTwSNz9LX2XDeI_00CwLqfSlhXi__NF1QmirzR1lMWaWeLuSzp7zk1sqJo_-qA/exec"
 
 from dotenv import load_dotenv
 load_dotenv()
 SLACK_BOT_TOKEN = os.environ.get("SLACK_BOT_TOKEN")
 
-#リアルタイムGAS表示用
-def send_name_to_gas(name):
-    payload = {"name": name}
-    requests.post(GAS_URL, json=payload)
+#リアルタイムGAS表示用（入口カメラ）
+def send_entry(name):
+    data = {
+        "name": name
+    }
+    requests.post(
+        GAS_URL,
+        data=json.dumps(data),
+        headers={"Content-Type": "application/json"}
+    )
 
 def SendToSlackMessage(message,passed_days):
     client = WebClient(token=SLACK_BOT_TOKEN) 
@@ -136,22 +144,22 @@ while True:
         
         if best_sim < 0.5:
             best_match = "Unknown"
-
-
         
         if best_match in name_list:
+            
+            send_entry(best_match) #GAS送信
             if name_list[best_match] != datetime.date.today():
                 passed_daytime=name_list[best_match]- datetime.date.today()
                 passed_days=passed_daytime.days
                 #SendToSlackMessage(best_match,passed_days)
-                send_name_to_gas(best_match) #GAS送信
+                
                 name_list[best_match] = datetime.date.today()
 
         else:
             if best_match != "Unknown": #and kidoubi!=datetime.date.today():
                 name_list[best_match] = datetime.date.today()
                 #SendToSlackMessage(best_match,0)
-                send_name_to_gas(best_match) #GAS送信
+                send_entry(best_match) #GAS送信
 
         box = face.bbox.astype(int)
         cv2.rectangle(frame, (box[0], box[1]), (box[2], box[3]), (0, 255, 0), 2)
