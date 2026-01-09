@@ -13,7 +13,7 @@ import json
 
 #GAS用
 import requests
-GAS_URL = "https://script.google.com/macros/s/AKfycbxn_qfavTwSNz9LX2XDeI_00CwLqfSlhXi__NF1QmirzR1lMWaWeLuSzp7zk1sqJo_-qA/exec"
+GAS_URL = "https://script.google.com/macros/s/AKfycbwq0ikrB0fqqHz6NJ4mzhWFbqOcuGQzFDA-Kyvu43iAUjWUrZJd5fdfskunZFi4CQRu-w/exec"
 from dotenv import load_dotenv
 load_dotenv()
 SLACK_BOT_TOKEN = os.environ.get("SLACK_BOT_TOKEN")
@@ -24,11 +24,14 @@ def send_exit(name):
         "event": "exit",
         "name": name
     }
-    requests.post(
+    res = requests.post(
         GAS_URL,
         data=json.dumps(data),
         headers={"Content-Type": "application/json"}
     )
+    #doPostの返り血取得
+    result = res.json()
+    print(result)
 
 
 def SendToSlackMessage(message,passed_days):

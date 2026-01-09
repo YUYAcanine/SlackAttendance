@@ -13,7 +13,7 @@ import pyttsx3
 import requests
 import json
 
-GAS_URL = "https://script.google.com/macros/s/AKfycbxn_qfavTwSNz9LX2XDeI_00CwLqfSlhXi__NF1QmirzR1lMWaWeLuSzp7zk1sqJo_-qA/exec"
+GAS_URL = "https://script.google.com/macros/s/AKfycbwq0ikrB0fqqHz6NJ4mzhWFbqOcuGQzFDA-Kyvu43iAUjWUrZJd5fdfskunZFi4CQRu-w/exec"
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -22,13 +22,21 @@ SLACK_BOT_TOKEN = os.environ.get("SLACK_BOT_TOKEN")
 #リアルタイムGAS表示用（入口カメラ）
 def send_entry(name):
     data = {
+        "event": "entry",
         "name": name
     }
-    requests.post(
+
+    #戻り値の定義とdopostの実行
+    res = requests.post(
         GAS_URL,
         data=json.dumps(data),
         headers={"Content-Type": "application/json"}
     )
+
+    #doPostの返り血取得
+    result = res.json()
+    print(result)
+
 
 def SendToSlackMessage(message,passed_days):
     client = WebClient(token=SLACK_BOT_TOKEN) 
@@ -148,6 +156,7 @@ while True:
         if best_match in name_list:
             
             send_entry(best_match) #GAS送信
+
             if name_list[best_match] != datetime.date.today():
                 passed_daytime=name_list[best_match]- datetime.date.today()
                 passed_days=passed_daytime.days
