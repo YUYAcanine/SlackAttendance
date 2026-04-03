@@ -13,7 +13,7 @@ import json
 
 #GAS用
 import requests
-GAS_URL = "https://script.google.com/macros/s/AKfycbwq0ikrB0fqqHz6NJ4mzhWFbqOcuGQzFDA-Kyvu43iAUjWUrZJd5fdfskunZFi4CQRu-w/exec"
+GAS_URL = "https://script.google.com/macros/s/AKfycbxgHr0v6UoXf0Nbc0O-ihQj87qlkf9w97hzq8QCpkKGsfA-zI62ABvtJ9PAIvXs5og2Ew/exec"
 from dotenv import load_dotenv
 load_dotenv()
 SLACK_BOT_TOKEN = os.environ.get("SLACK_BOT_TOKEN")
