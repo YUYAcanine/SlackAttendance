@@ -37,75 +37,80 @@ def send_entry(name):
     result = res.json()
     print(result)
 
+def speak(text, speaker=8):  
+    query = requests.post(
+        "http://127.0.0.1:50021/audio_query",
+        params={"text": text, "speaker": speaker}
+    ).json()
 
-def SendToSlackMessage(message,passed_days):
-    client = WebClient(token=SLACK_BOT_TOKEN) 
-    
-    name_map = {"yuya":"川辺",
-                "yusei":"行平",
-                "satoshi":"稲垣",
-                "hane":"羽根",
-                "handa":"半田",
-                "hashimoto":"橋本",
-                "izumitani":"泉谷",
-                "kuribayashi":"栗林",
-                "matsumoto":"松元",
-                "nishida":"西田",
-                "nomura":"野村",
-                "noto":"能登",
-                "nozaki":"能崎",
-                "ono":"大野",
-                "sano":"佐野",
-                "tanaka":"田中",
-                "tokutomi":"徳富",
-                "kishimura":"岸村",
-                "yoshida":"吉田",
-                "kondo":"近藤"
-                }
-    name_map_read = {"yuya":"かわべ",
-                    "yusei":"ゆきひら",
-                    "satoshi":"いながき",
-                    "hane":"はね",
-                    "handa":"はんだ",
-                    "hashimoto":"はしもと",
-                    "izumitani":"いずみたに",
-                    "kuribayashi":"くりばやし",
-                    "matsumoto":"まつもと",
-                    "nishida":"にしだ",
-                    "nomura":"のむら",
-                    "noto":"のと",
-                    "nozaki":"のざき",
-                    "ono":"おおの",
-                    "sano":"さの",
-                    "tanaka":"たなか",
-                    "tokutomi":"とくとみ",
-                    "kishimura":"きしむら",
-                    "yoshida":"よしだ",
-                    "kondo":"こんどう"
-                    }
+    # ===== 調整 =====
+    query["volumeScale"] = 4.0
+    query["speedScale"] = 1.0
+    query["intonationScale"] = 1.0
 
-    response=client.chat_postMessage(channel='010_lab-in', text = name_map[message] + "出校しました")
-    if passed_days>3:
-        engine.say(name_map_read[message]+"さん、おひさしぶりです")
-    
+    voice = requests.post(
+        "http://127.0.0.1:50021/synthesis",
+        params={"speaker": speaker},
+        data=json.dumps(query)
+    )
+
+    with open("voice.wav", "wb") as f:
+        f.write(voice.content)
+
+    os.system("start voice.wav")
+
+
+# =========================
+# Slack + 音声
+# =========================
+def SendToSlackMessage(message, passed_days):
+    client = WebClient(token=SLACK_BOT_TOKEN)
+
+    name_map = {
+        "yuya":"川辺","yusei":"行平","satoshi":"稲垣","hane":"羽根",
+        "handa":"半田","hashimoto":"橋本","izumitani":"泉谷",
+        "kuribayashi":"栗林","matsumoto":"松元","nishida":"西田",
+        "nomura":"野村","noto":"能登","nozaki":"能崎","ono":"大野",
+        "sano":"佐野","tanaka":"田中","tokutomi":"徳富",
+        "kishimura":"岸村","yoshida":"吉田","kondo":"近藤"
+    }
+
+    name_map_read = {
+        "yuya":"かわべ","yusei":"ゆきひら","satoshi":"いながき","hane":"はね",
+        "handa":"はんだ","hashimoto":"はしもと","izumitani":"いずみたに",
+        "kuribayashi":"くりばやし","matsumoto":"まつもと","nishida":"にしだ",
+        "nomura":"のむら","noto":"のと","nozaki":"のざき","ono":"おおの",
+        "sano":"さの","tanaka":"たなか","tokutomi":"とくとみ",
+        "kishimura":"きしむら","yoshida":"よしだ","kondo":"こんどう"
+    }
+
+    # Slack投稿
+    """
+    client.chat_postMessage(
+        channel='010_lab-in',
+        text=name_map[message] + "出校しました"
+    )
+    """
+
+    # 音声分岐
+    name = name_map_read[message]
+    hour = datetime.datetime.now().hour
+
+    if passed_days > 3:
+        speak(f"{name}さん、おひさしぶりです")
+
     else:
-        if datetime.datetime.now().hour<4:
-            engine.say("通報しました")
-        
-        elif datetime.datetime.now().hour<12:
-            engine.say(name_map_read[message]+"さん、おはようございます")
-        
-        elif datetime.datetime.now().hour<18:
-            engine.say(name_map_read[message]+"さん、こんにちは")
-        
+        if hour < 4:
+            speak("通報しました")
+
+        elif hour < 12:
+            speak(f"{name}さん、おはようございます")
+
+        elif hour < 18:
+            speak(f"{name}さん、こんにちは")
+
         else:
-            engine.say(name_map_read[message]+"さん、こんばんは")
-        
-
-    
-    
-    engine.runAndWait()
-
+            speak(f"{name}さん、こんばんは")
 
 
 app = FaceAnalysis(name='buffalo_l')
