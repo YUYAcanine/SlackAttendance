@@ -171,14 +171,14 @@ while True:
                 if name_list[best_match] != datetime.date.today():
                     passed_daytime=name_list[best_match]- datetime.date.today()
                     passed_days=passed_daytime.days
-                    #SendToSlackMessage(best_match,passed_days)
+                    SendToSlackMessage(best_match,passed_days)
                     
                     name_list[best_match] = datetime.date.today()
 
             else:
                 if best_match != "Unknown": #and kidoubi!=datetime.date.today():
                     name_list[best_match] = datetime.date.today()
-                    #SendToSlackMessage(best_match,0)
+                    SendToSlackMessage(best_match,0)
                     if i:
                         send_exit(best_match)
                     else:

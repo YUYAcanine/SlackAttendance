@@ -33,77 +33,6 @@ def send_exit(name):
     result = res.json()
     print(result)
 
-
-def SendToSlackMessage(message,passed_days):
-    client = WebClient(token=SLACK_BOT_TOKEN) 
-    
-    name_map = {"yuya":"川辺",
-                "yusei":"行平",
-                "satoshi":"稲垣",
-                "hane":"羽根",
-                "handa":"半田",
-                "hashimoto":"橋本",
-                "izumitani":"泉谷",
-                "kuribayashi":"栗林",
-                "matsumoto":"松元",
-                "nishida":"西田",
-                "nomura":"野村",
-                "noto":"能登",
-                "nozaki":"能崎",
-                "ono":"大野",
-                "sano":"佐野",
-                "tanaka":"田中",
-                "tokutomi":"徳富",
-                "kishimura":"岸村",
-                "yoshida":"吉田",
-                "kondo":"近藤"
-                }
-    name_map_read = {"yuya":"かわべ",
-                    "yusei":"ゆきひら",
-                    "satoshi":"いながき",
-                    "hane":"はね",
-                    "handa":"はんだ",
-                    "hashimoto":"はしもと",
-                    "izumitani":"いずみたに",
-                    "kuribayashi":"くりばやし",
-                    "matsumoto":"まつもと",
-                    "nishida":"にしだ",
-                    "nomura":"のむら",
-                    "noto":"のと",
-                    "nozaki":"のざき",
-                    "ono":"おおの",
-                    "sano":"さの",
-                    "tanaka":"たなか",
-                    "tokutomi":"とくとみ",
-                    "kishimura":"きしむら",
-                    "yoshida":"よしだ",
-                    "kondo":"こんどう"
-                    }
-
-    response=client.chat_postMessage(channel='010_lab-in', text = name_map[message] + "出校しました")
-    if passed_days>3:
-        engine.say(name_map_read[message]+"さん、おひさしぶりです")
-    
-    else:
-        if datetime.datetime.now().hour<4:
-            engine.say("通報しました")
-        
-        elif datetime.datetime.now().hour<12:
-            engine.say(name_map_read[message]+"さん、おはようございます")
-        
-        elif datetime.datetime.now().hour<18:
-            engine.say(name_map_read[message]+"さん、こんにちは")
-        
-        else:
-            engine.say(name_map_read[message]+"さん、こんばんは")
-        
-
-    
-    
-    engine.runAndWait()
-
-
-
 app = FaceAnalysis(name='buffalo_l')
 app.prepare(ctx_id=0, det_size=(640, 640))
 
@@ -142,11 +71,11 @@ while True:
                 best_sim = sim
                 best_match_exit = name
                     
-        label = f"{best_match_exit} ({best_sim:.2f})" if best_sim > 0.5 else "Unknown"
+        label = f"{best_match_exit} ({best_sim:.2f})" if best_sim > 0.1 else "Unknown"
 
 
         
-        if best_sim < 0.5:
+        if best_sim < 0.3:
             best_match_exit = "Unknown"
 
 
@@ -155,14 +84,12 @@ while True:
             send_exit(best_match_exit) #GAS送信
             if name_list[best_match_exit] != datetime.date.today():
                 passed_daytime=name_list[best_match_exit]- datetime.date.today()
-                passed_days=passed_daytime.days
-                #SendToSlackMessage(best_match_exit,passed_days)
+                passed_days=passed_daytime.day
                 name_list[best_match_exit] = datetime.date.today()
 
         else:
             if best_match_exit != "Unknown": #and kidoubi!=datetime.date.today():
                 name_list[best_match_exit] = datetime.date.today()
-                #SendToSlackMessage(best_match_exit,0)
                 send_exit(best_match_exit) #GAS送信
 
         box = face.bbox.astype(int)
