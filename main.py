@@ -25,17 +25,6 @@ def send_entry(name):
         "event": "entry",
         "name": name
     }
-    requests.post(
-        GAS_URL,
-        data=json.dumps(data),
-        headers={"Content-Type": "application/json"}
-    )
-
-def send_exit(name):
-    data = {
-        "event": "exit",
-        "name": name
-    }
 
     #戻り値の定義とdopostの実行
     res = requests.post(
@@ -43,6 +32,10 @@ def send_exit(name):
         data=json.dumps(data),
         headers={"Content-Type": "application/json"}
     )
+
+    #doPostの返り血取得
+    result = res.json()
+    print(result)
 
 
 def SendToSlackMessage(message,passed_days):
@@ -134,65 +127,57 @@ for filename in os.listdir(EMBEDDING_DIR):
         emb = np.load(os.path.join(EMBEDDING_DIR, filename))
         known_faces[name] = emb
 
-cap1 = cv2.VideoCapture(0) 
-cap2 = cv2.VideoCapture(1)
-camera_list=[cap1,cap2]
-imshow_list=["entry","exit"]
+cap = cv2.VideoCapture(0) #1→外部カメラ、0→内臓カメラ
+
 while True:
-    for i in range(2):
-        ret, frame = camera_list[i].read()
-        if not ret:
-            break
+    ret, frame = cap.read()
+    if not ret:
+        break
 
-        faces = app.get(frame)
-        for face in faces:
-            emb = face.embedding
-            best_match = "Unknown"
-            best_sim = 0
+    faces = app.get(frame)
+    for face in faces:
+        emb = face.embedding
+        best_match = "Unknown"
+        best_sim = 0
 
-            for name, known_emb in known_faces.items():
-                sim = np.dot(emb, known_emb) / (np.linalg.norm(emb) * np.linalg.norm(known_emb))
-                if sim > best_sim:
-                    best_sim = sim
-                    best_match = name
-                        
-            label = f"{best_match} ({best_sim:.2f})" if best_sim > 0.1 else "Unknown"
-
-
-            
-            if best_sim < 0.3:
-                best_match = "Unknown"
-            
-            if best_match in name_list:
-                if i:
-                    send_exit(best_match)
-                else:
-                    send_entry(best_match) #GAS送信
-                if name_list[best_match] != datetime.date.today():
-                    passed_daytime=name_list[best_match]- datetime.date.today()
-                    passed_days=passed_daytime.days
-                    SendToSlackMessage(best_match,passed_days)
+        for name, known_emb in known_faces.items():
+            sim = np.dot(emb, known_emb) / (np.linalg.norm(emb) * np.linalg.norm(known_emb))
+            if sim > best_sim:
+                best_sim = sim
+                best_match = name
                     
-                    name_list[best_match] = datetime.date.today()
+        label = f"{best_match} ({best_sim:.2f})" if best_sim > 0.1 else "Unknown"
 
-            else:
-                if best_match != "Unknown": #and kidoubi!=datetime.date.today():
-                    name_list[best_match] = datetime.date.today()
-                    SendToSlackMessage(best_match,0)
-                    if i:
-                        send_exit(best_match)
-                    else:
-                        send_entry(best_match) #GAS送信
 
-            box = face.bbox.astype(int)
-            cv2.rectangle(frame, (box[0], box[1]), (box[2], box[3]), (0, 255, 0), 2)
-            cv2.putText(frame, label, (box[0], box[1] - 10),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
+        
+        if best_sim < 0.3:
+            best_match = "Unknown"
+        
+        if best_match in name_list:
+            
+            send_entry(best_match) #GAS送信
 
-        cv2.imshow(imshow_list[i], frame)
+            if name_list[best_match] != datetime.date.today():
+                passed_daytime=name_list[best_match]- datetime.date.today()
+                passed_days=passed_daytime.days
+                SendToSlackMessage(best_match,passed_days)
+                
+                name_list[best_match] = datetime.date.today()
+
+        else:
+            if best_match != "Unknown": #and kidoubi!=datetime.date.today():
+                name_list[best_match] = datetime.date.today()
+                SendToSlackMessage(best_match,0)
+                send_entry(best_match) #GAS送信
+
+        box = face.bbox.astype(int)
+        cv2.rectangle(frame, (box[0], box[1]), (box[2], box[3]), (0, 255, 0), 2)
+        cv2.putText(frame, label, (box[0], box[1] - 10),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
+
+    cv2.imshow("Face Recognition", frame)
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
-cap1.release()
-cap2.release()
+cap.release()
 cv2.destroyAllWindows()

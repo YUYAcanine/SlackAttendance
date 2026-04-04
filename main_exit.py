@@ -75,7 +75,7 @@ while True:
 
 
         
-        if best_sim < 0.3:
+        if best_sim < 0.25:
             best_match_exit = "Unknown"
 
 
