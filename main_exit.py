@@ -13,7 +13,7 @@ import json
 
 #GAS用
 import requests
-GAS_URL = "https://script.google.com/macros/s/AKfycbxgHr0v6UoXf0Nbc0O-ihQj87qlkf9w97hzq8QCpkKGsfA-zI62ABvtJ9PAIvXs5og2Ew/exec"
+GAS_URL = "https://script.google.com/macros/s/AKfycbxr0AmQog7l9y6QewIgSagQX_K2-wS_9eWcdjsbSPETV07ON5gEeUZ8gRyr2JepLcerSg/exec"
 from dotenv import load_dotenv
 load_dotenv()
 SLACK_BOT_TOKEN = os.environ.get("SLACK_BOT_TOKEN")
@@ -54,14 +54,72 @@ for filename in os.listdir(EMBEDDING_DIR):
 
 cap = cv2.VideoCapture(1) #1→外部カメラ、0→内臓カメラ
 
+def preprocess(frame):
+    lab = cv2.cvtColor(frame, cv2.COLOR_BGR2LAB)
+    l, a, b = cv2.split(lab)
+
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+    l = clahe.apply(l)
+
+    lab = cv2.merge((l,a,b))
+    frame = cv2.cvtColor(lab, cv2.COLOR_LAB2BGR)
+    return frame
+
+
+def gamma_correction(img, gamma=1.5):
+    invGamma = 1.0 / gamma
+    table = np.array([(i / 255.0) ** invGamma * 255 for i in np.arange(256)]).astype("uint8")
+    return cv2.LUT(img, table)
+
+def brighten(img, alpha=1.3, beta=40):
+    # alpha: コントラスト, beta: 明るさ
+    return cv2.convertScaleAbs(img, alpha=alpha, beta=beta)
+
 while True:
     ret, frame = cap.read()
     if not ret:
         break
-
+    #frame = preprocess(frame)
+    #frame = gamma_correction(frame, 1.5)
+    #frame = brighten(frame, 1.3, 40)
     faces = app.get(frame)
+
     for face in faces:
+        box = face.bbox.astype(int)
+        x1, y1, x2, y2 = box
+
+        x1 = max(0, x1)
+        y1 = max(0, y1)
+        x2 = min(frame.shape[1], x2)
+        y2 = min(frame.shape[0], y2)
+
+        face_img = frame[y1:y2, x1:x2]
+
+        # ===== 顔補正（可変強度）=====
+        gray = cv2.cvtColor(face_img, cv2.COLOR_BGR2GRAY)
+        mean_val = np.mean(gray)
+
+        if mean_val < 60:
+            # かなり暗い
+            face_img = gamma_correction(face_img, 1.8)
+            face_img = brighten(face_img, 1.4, 70)
+
+        elif mean_val < 90:
+            # 少し暗い
+            face_img = gamma_correction(face_img, 1.4)
+            face_img = brighten(face_img, 1.2, 30)
+
+        # 明るいときは何もしない
+
+        # 白飛び防止
+        face_img = np.clip(face_img, 0, 220)
+
+        frame[y1:y2, x1:x2] = face_img
+
+        # ===== embedding =====
         emb = face.embedding
+
+
         best_match_exit = "Unknown"
         best_sim = 0
 
@@ -77,14 +135,14 @@ while True:
         
         if best_sim < 0.25:
             best_match_exit = "Unknown"
-
-
         
         if best_match_exit in name_list:
-            send_exit(best_match_exit) #GAS送信
+            send_exit(best_match_exit) # GAS送信
+
             if name_list[best_match_exit] != datetime.date.today():
-                passed_daytime=name_list[best_match_exit]- datetime.date.today()
-                passed_days=passed_daytime.day
+                passed_daytime = datetime.date.today() - name_list[best_match_exit]
+                passed_days = passed_daytime.days
+
                 name_list[best_match_exit] = datetime.date.today()
 
         else:

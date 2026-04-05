@@ -13,7 +13,7 @@ import pyttsx3
 import requests
 import json
 
-GAS_URL = "https://script.google.com/macros/s/AKfycbxgHr0v6UoXf0Nbc0O-ihQj87qlkf9w97hzq8QCpkKGsfA-zI62ABvtJ9PAIvXs5og2Ew/exec"
+GAS_URL = "https://script.google.com/macros/s/AKfycbxr0AmQog7l9y6QewIgSagQX_K2-wS_9eWcdjsbSPETV07ON5gEeUZ8gRyr2JepLcerSg/exec"
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -119,12 +119,10 @@ def SendToSlackMessage(message, passed_days):
     }
 
     # Slack投稿
-    """
     client.chat_postMessage(
         channel='010_lab-in',
         text=name_map[message] + "出校しました"
     )
-    """
 
     # 音声分岐
     name = name_map_read[message]
@@ -189,7 +187,7 @@ while True:
 
 
         
-        if best_sim < 0.3:
+        if best_sim < 0.35:
             best_match = "Unknown"
         
         if best_match in name_list:
