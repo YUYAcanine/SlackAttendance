@@ -13,7 +13,7 @@ import json
 
 #GAS用
 import requests
-GAS_URL = "https://script.google.com/macros/s/AKfycbxr0AmQog7l9y6QewIgSagQX_K2-wS_9eWcdjsbSPETV07ON5gEeUZ8gRyr2JepLcerSg/exec"
+GAS_URL = "https://script.google.com/macros/s/AKfycby1-BKUwUAgA4nA-CuLZnQ6aQWnGGzB_xg0qc1-jwq0wPt0u7gj_2FhTw-TVVTRg4mz/exec"
 from dotenv import load_dotenv
 load_dotenv()
 SLACK_BOT_TOKEN = os.environ.get("SLACK_BOT_TOKEN")
@@ -52,7 +52,7 @@ for filename in os.listdir(EMBEDDING_DIR):
         emb = np.load(os.path.join(EMBEDDING_DIR, filename))
         known_faces[name] = emb
 
-cap = cv2.VideoCapture(1) #1→外部カメラ、0→内臓カメラ
+cap = cv2.VideoCapture(0) #1→外部カメラ、0→内臓カメラ
 
 def preprocess(frame):
     lab = cv2.cvtColor(frame, cv2.COLOR_BGR2LAB)
@@ -133,7 +133,7 @@ while True:
 
 
         
-        if best_sim < 0.25:
+        if best_sim < 0.3:
             best_match_exit = "Unknown"
         
         if best_match_exit in name_list:

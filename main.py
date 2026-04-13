@@ -13,7 +13,7 @@ import pyttsx3
 import requests
 import json
 
-GAS_URL = "https://script.google.com/macros/s/AKfycbxr0AmQog7l9y6QewIgSagQX_K2-wS_9eWcdjsbSPETV07ON5gEeUZ8gRyr2JepLcerSg/exec"
+GAS_URL = "https://script.google.com/macros/s/AKfycby1-BKUwUAgA4nA-CuLZnQ6aQWnGGzB_xg0qc1-jwq0wPt0u7gj_2FhTw-TVVTRg4mz/exec"
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -164,7 +164,7 @@ for filename in os.listdir(EMBEDDING_DIR):
         emb = np.load(os.path.join(EMBEDDING_DIR, filename))
         known_faces[name] = emb
 
-cap = cv2.VideoCapture(0) #1→外部カメラ、0→内臓カメラ
+cap = cv2.VideoCapture(1) #1→外部カメラ、0→内臓カメラ
 
 while True:
     ret, frame = cap.read()
