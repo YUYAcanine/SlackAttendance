@@ -30,7 +30,12 @@ def send_exit(name):
         headers={"Content-Type": "application/json"}
     )
     #doPostの返り血取得
-    result = res.json()
+    try:
+        result = res.json()
+    except Exception as e:
+        print("JSON失敗:", res.text)
+        result = None
+
     print(result)
 
 app = FaceAnalysis(name='buffalo_l')

@@ -33,9 +33,14 @@ def send_entry(name):
         headers={"Content-Type": "application/json"}
     )
 
-    #doPostの返り血取得
-    result = res.json()
+    try:
+        result = res.json()
+    except Exception as e:
+        print("JSON失敗:", res.text)
+        result = None
+
     print(result)
+
 
 def speak(text, speaker=8):  
     query = requests.post(
@@ -118,12 +123,14 @@ def SendToSlackMessage(message, passed_days):
         "katsuyama":"かつやま",
     }
 
+    
     # Slack投稿
     client.chat_postMessage(
         channel='010_lab-in',
         text=name_map[message] + "出校しました"
     )
-
+    
+    
     # 音声分岐
     name = name_map_read[message]
     hour = datetime.datetime.now().hour
