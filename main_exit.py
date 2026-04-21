@@ -13,7 +13,7 @@ import json
 
 #GAS用
 import requests
-GAS_URL = "https://script.google.com/macros/s/AKfycby1-BKUwUAgA4nA-CuLZnQ6aQWnGGzB_xg0qc1-jwq0wPt0u7gj_2FhTw-TVVTRg4mz/exec"
+GAS_URL = "https://script.google.com/macros/s/AKfycbydp7o_L3WHgqa2FciTKXKYw5MC0oRz2RVayJndmpO0D-krKs2_gIl2OgdM_5aJKUIQ/exec"
 from dotenv import load_dotenv
 load_dotenv()
 SLACK_BOT_TOKEN = os.environ.get("SLACK_BOT_TOKEN")
@@ -138,7 +138,7 @@ while True:
 
 
         
-        if best_sim < 0.3:
+        if best_sim < 0.25:
             best_match_exit = "Unknown"
         
         if best_match_exit in name_list:

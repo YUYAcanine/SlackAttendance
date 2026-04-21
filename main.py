@@ -13,7 +13,7 @@ import pyttsx3
 import requests
 import json
 
-GAS_URL = "https://script.google.com/macros/s/AKfycby1-BKUwUAgA4nA-CuLZnQ6aQWnGGzB_xg0qc1-jwq0wPt0u7gj_2FhTw-TVVTRg4mz/exec"
+GAS_URL = "https://script.google.com/macros/s/AKfycbydp7o_L3WHgqa2FciTKXKYw5MC0oRz2RVayJndmpO0D-krKs2_gIl2OgdM_5aJKUIQ/exec"
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -95,6 +95,7 @@ def SendToSlackMessage(message, passed_days):
         "shibata":"柴田",
         "tomioka":"富岡",
         "katsuyama":"勝山",
+        "yamada":"山田",
     }
 
     name_map_read = {
@@ -121,6 +122,7 @@ def SendToSlackMessage(message, passed_days):
         "shibata":"しばた",
         "tomioka":"とみおか",
         "katsuyama":"かつやま",
+        "yamada":"やまだ",
     }
 
     
