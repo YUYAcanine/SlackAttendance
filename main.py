@@ -13,7 +13,7 @@ import pyttsx3
 import requests
 import json
 
-GAS_URL = "https://script.google.com/macros/s/AKfycbydp7o_L3WHgqa2FciTKXKYw5MC0oRz2RVayJndmpO0D-krKs2_gIl2OgdM_5aJKUIQ/exec"
+GAS_URL = "https://script.google.com/macros/s/AKfycbyD-wOokoTlixMlo51S8MfX1l1QC7awy8PTopXIbidatcmwX_IGjiaZJ8uydexAQxkR/exec"
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -125,13 +125,13 @@ def SendToSlackMessage(message, passed_days):
         "yamada":"やまだ",
     }
 
-    
+    """
     # Slack投稿
     client.chat_postMessage(
         channel='010_lab-in',
         text=name_map[message] + "出校しました"
     )
-    
+    """
     
     # 音声分岐
     name = name_map_read[message]
@@ -173,7 +173,7 @@ for filename in os.listdir(EMBEDDING_DIR):
         emb = np.load(os.path.join(EMBEDDING_DIR, filename))
         known_faces[name] = emb
 
-cap = cv2.VideoCapture(1) #1→外部カメラ、0→内臓カメラ
+cap = cv2.VideoCapture(0) #1→外部カメラ、0→内臓カメラ
 
 while True:
     ret, frame = cap.read()
