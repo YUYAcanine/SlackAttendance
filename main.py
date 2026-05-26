@@ -125,13 +125,13 @@ def SendToSlackMessage(message, passed_days):
         "yamada":"やまだ",
     }
 
-    """
+    
     # Slack投稿
     client.chat_postMessage(
         channel='010_lab-in',
         text=name_map[message] + "出校しました"
     )
-    """
+    
     
     # 音声分岐
     name = name_map_read[message]
@@ -196,7 +196,7 @@ while True:
 
 
         
-        if best_sim < 0.35:
+        if best_sim < 0.4:
             best_match = "Unknown"
         
         if best_match in name_list:
