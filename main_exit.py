@@ -84,7 +84,7 @@ for filename in os.listdir(EMBEDDING_DIR):
 #     return cv2.convertScaleAbs(img, alpha=alpha, beta=beta)
 
 
-cap = cv2.VideoCapture(1)  # 1→外部カメラ、0→内臓カメラ
+cap = cv2.VideoCapture(0)  # 1→外部カメラ、0→内臓カメラ
 
 
 while True:
