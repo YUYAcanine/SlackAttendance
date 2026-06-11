@@ -96,6 +96,7 @@ def SendToSlackMessage(message, passed_days):
         "tomioka":"富岡",
         "katsuyama":"勝山",
         "yamada":"山田",
+        "philip":"フィリップ",
     }
 
     name_map_read = {
@@ -123,6 +124,7 @@ def SendToSlackMessage(message, passed_days):
         "tomioka":"とみおか",
         "katsuyama":"かつやま",
         "yamada":"やまだ",
+        "philip":"フィリップ",
     }
 
     
