@@ -8,7 +8,11 @@ import json
 
 # GAS用
 import requests
-GAS_URL = "https://script.google.com/macros/s/AKfycbyD-wOokoTlixMlo51S8MfX1l1QC7awy8PTopXIbidatcmwX_IGjiaZJ8uydexAQxkR/exec"
+import time
+STATUS_API_URL = os.environ.get(
+    "STATUS_API_URL",
+    "http://127.0.0.1:8000/api/events",
+)
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -22,11 +26,16 @@ def send_exit(name):
         "name": name
     }
 
-    res = requests.post(
-        GAS_URL,
-        data=json.dumps(data),
-        headers={"Content-Type": "application/json"}
-    )
+    try:
+        res = requests.post(
+            STATUS_API_URL,
+            data=json.dumps(data),
+            headers={"Content-Type": "application/json"},
+            timeout=5,
+        )
+    except requests.RequestException as e:
+        print("在室サーバーへの送信失敗:", e)
+        return
 
     # doPostの返り血取得
     try:
@@ -87,6 +96,9 @@ for filename in os.listdir(EMBEDDING_DIR):
 cap = cv2.VideoCapture(0)  # 1→外部カメラ、0→内臓カメラ
 
 
+FACE_PROCESS_INTERVAL = 1.0 / 3.0
+last_face_process_time = 0.0
+
 while True:
     ret, frame = cap.read()
 
@@ -98,6 +110,13 @@ while True:
     # frame = gamma_correction(frame, 1.5)
     # frame = brighten(frame, 1.3, 40)
 
+
+    now = time.monotonic()
+    if now - last_face_process_time < FACE_PROCESS_INTERVAL:
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+        continue
+    last_face_process_time = now
 
     faces = app.get(frame)
 

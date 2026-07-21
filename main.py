@@ -1,231 +1,222 @@
-
-import cv2
-import numpy as np
-import os
-
-from insightface.app import FaceAnalysis
-from slack_sdk import WebClient
-from slack_sdk.errors import SlackApiError
 import datetime
-import pyttsx3
-
-#GAS用
-import requests
 import json
+import os
+from pathlib import Path
+import subprocess
+import sys
+import threading
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from urllib.error import URLError
+from urllib.request import Request, urlopen
 
-GAS_URL = "https://script.google.com/macros/s/AKfycbyD-wOokoTlixMlo51S8MfX1l1QC7awy8PTopXIbidatcmwX_IGjiaZJ8uydexAQxkR/exec"
 
-from dotenv import load_dotenv
-load_dotenv()
-SLACK_BOT_TOKEN = os.environ.get("SLACK_BOT_TOKEN")
+HOST = os.environ.get("STATUS_SERVER_HOST", "0.0.0.0")
+PORT = int(os.environ.get("STATUS_SERVER_PORT", "8000"))
+LED_SERVER = os.environ.get(
+    "LED_SERVER_URL",
+    "https://utilize-ignition-amber.ngrok-free.dev",
+).rstrip("/")
+PROJECT_DIR = Path(__file__).resolve().parent
+STATE_FILE = PROJECT_DIR / "attendance_state.json"
+STATE_LOCK = threading.Lock()
 
-#リアルタイムGAS表示用（入口カメラ）
-def send_entry(name):
-    data = {
-        "event": "entry",
-        "name": name
+NAME_MAP = {
+    "yuya": "川辺", "yusei": "行平", "satoshi": "稲垣", "hane": "羽根",
+    "hashimoto": "橋本", "kuribayashi": "栗林", "matsumoto": "松元",
+    "nishida": "西田", "nomura": "野村", "ono": "大野", "sano": "佐野",
+    "tanaka": "田中", "tokutomi": "徳富", "yoshida": "吉田", "kondo": "近藤",
+    "hasegawa": "長谷川", "hoashi": "帆足", "honda": "本田",
+    "hujiwara": "藤原", "kamigiri": "上桐", "shibata": "柴田",
+    "tomioka": "富岡", "katsuyama": "勝山", "yamada": "山田",
+    "philip": "フィリップ",
+}
+
+PAGE = """<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>リアルタイム在室状況</title>
+  <style>
+    :root { font-family: system-ui, sans-serif; color: #172033; background: #f4f7fb; }
+    body { max-width: 1200px; margin: 0 auto; padding: 28px; }
+    h1 { margin-bottom: 4px; }
+    #summary { color: #5b6474; margin-bottom: 24px; }
+    #people { display: flex; flex-wrap: wrap; gap: 16px; }
+    .person { min-width: 150px; padding: 22px 28px; border-radius: 16px;
+      background: white; box-shadow: 0 5px 20px #20305018; font-size: 28px;
+      font-weight: 700; text-align: center; border-left: 8px solid #22a06b; }
+    .person.out { color: #7b8493; background: #e8ebf0; border-color: #9aa2ae; }
+    .status { margin-top: 7px; font-size: 13px; font-weight: 500; }
+    #updated { margin-top: 28px; color: #778090; }
+  </style>
+</head>
+<body>
+  <h1>リアルタイム在室状況</h1>
+  <div id="summary">読み込み中...</div>
+  <main id="people"></main>
+  <div id="updated"></div>
+  <script>
+    const names = __NAME_MAP__;
+    function escapeHtml(value) {
+      const node = document.createElement('div');
+      node.textContent = value;
+      return node.innerHTML;
     }
+    async function refresh() {
+      try {
+        const response = await fetch('/api/status', {cache: 'no-store'});
+        const data = await response.json();
+        const people = data.people || [];
+        const inCount = people.filter(p => p.status === 'in').length;
+        document.querySelector('#summary').textContent = `401 在室 ${inCount}人 / 登録 ${people.length}人`;
+        document.querySelector('#people').innerHTML = people.length
+          ? people.map(p => `<section class="person ${p.status === 'out' ? 'out' : ''}">
+              ${escapeHtml(names[p.name] || p.name)}
+              <div class="status">${p.status === 'out' ? '外出 / 帰宅' : '在室'}</div>
+            </section>`).join('')
+          : '<p>現在、在室記録はありません。</p>';
+        document.querySelector('#updated').textContent = `最終確認: ${new Date().toLocaleString('ja-JP')}`;
+      } catch (error) {
+        document.querySelector('#summary').textContent = 'サーバーから状態を取得できません';
+      }
+    }
+    refresh();
+    setInterval(refresh, 3000);
+  </script>
+</body>
+</html>
+""".replace("__NAME_MAP__", json.dumps(NAME_MAP, ensure_ascii=False))
 
-    #戻り値の定義とdopostの実行
-    res = requests.post(
-        GAS_URL,
-        data=json.dumps(data),
-        headers={"Content-Type": "application/json"}
-    )
 
+def empty_state():
+    return {"date": datetime.date.today().isoformat(), "people": []}
+
+
+def load_state():
+    today = datetime.date.today().isoformat()
     try:
-        result = res.json()
-    except Exception as e:
-        print("JSON失敗:", res.text)
-        result = None
+        state = json.loads(STATE_FILE.read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        state = empty_state()
+    if state.get("date") != today:
+        state = empty_state()
+        save_state(state)
+    return state
 
-    print(result)
 
-
-def speak(text, speaker=8):  
-    query = requests.post(
-        "http://127.0.0.1:50021/audio_query",
-        params={"text": text, "speaker": speaker}
-    ).json()
-
-    # ===== 調整 =====
-    query["volumeScale"] = 4.0
-    query["speedScale"] = 1.0
-    query["intonationScale"] = 1.0
-
-    voice = requests.post(
-        "http://127.0.0.1:50021/synthesis",
-        params={"speaker": speaker},
-        data=json.dumps(query)
+def save_state(state):
+    STATE_FILE.write_text(
+        json.dumps(state, ensure_ascii=False, indent=2),
+        encoding="utf-8",
     )
 
-    with open("voice.wav", "wb") as f:
-        f.write(voice.content)
 
-    os.system("start voice.wav")
+def update_status(event, name):
+    with STATE_LOCK:
+        state = load_state()
+        person = next((item for item in state["people"] if item["name"] == name), None)
+        if event == "entry":
+            if person:
+                person["status"] = "in"
+            else:
+                state["people"].append({"name": name, "status": "in"})
+        elif event == "exit" and person and person["status"] == "in":
+            person["status"] = "out"
+        save_state(state)
+        return state
 
 
-# =========================
-# Slack + 音声
-# =========================
-def SendToSlackMessage(message, passed_days):
-    client = WebClient(token=SLACK_BOT_TOKEN)
+def blink_led(event):
+    path = "/light4/blink" if event == "entry" else "/light5/blink"
+    try:
+        request = Request(
+            LED_SERVER + path,
+            headers={"ngrok-skip-browser-warning": "true"},
+        )
+        urlopen(request, timeout=3).close()
+    except (URLError, TimeoutError, OSError):
+        pass
 
-    name_map = {
-        "yuya":"川辺",
-        "yusei":"行平",
-        "satoshi":"稲垣",
-        "hane":"羽根",
-        "hashimoto":"橋本",
-        "kuribayashi":"栗林",
-        "matsumoto":"松元",
-        "nishida":"西田",
-        "nomura":"野村",
-        "ono":"大野",
-        "sano":"佐野",
-        "tanaka":"田中",
-        "tokutomi":"徳富",
-        "yoshida":"吉田",
-        "kondo":"近藤" ,
-        "hasegawa":"長谷川",
-        "hoashi":"帆足",
-        "honda":"本田",
-        "hujiwara":"藤原",
-        "kamigiri":"上桐",
-        "shibata":"柴田",
-        "tomioka":"富岡",
-        "katsuyama":"勝山",
-        "yamada":"山田",
-        "philip":"フィリップ",
-    }
 
-    name_map_read = {
-        "yuya":"かわべ",
-        "yusei":"ゆきひら",
-        "satoshi":"いながき",
-        "hane":"はね",
-        "hashimoto":"はしもと",
-        "kuribayashi":"くりばやし",
-        "matsumoto":"まつもと",
-        "nishida":"にしだ",
-        "nomura":"のむら",
-        "ono":"おおの",
-        "sano":"さの",
-        "tanaka":"たなか",
-        "tokutomi":"とくとみ",
-        "yoshida":"よしだ",
-        "kondo":"こんどう",
-        "hasegawa":"はせがわ",
-        "hoashi":"ほあし",
-        "honda":"ほんだ",
-        "hujiwara":"ふじわら",
-        "kamigiri":"かみぎり",
-        "shibata":"しばた",
-        "tomioka":"とみおか",
-        "katsuyama":"かつやま",
-        "yamada":"やまだ",
-        "philip":"フィリップ",
-    }
+class StatusHandler(BaseHTTPRequestHandler):
+    def send_bytes(self, status, content_type, body):
+        self.send_response(status)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(body)
 
-    
-    # Slack投稿
-    client.chat_postMessage(
-        channel='010_lab-in',
-        text=name_map[message] + "出校しました"
-    )
-    
-    
-    # 音声分岐
-    name = name_map_read[message]
-    hour = datetime.datetime.now().hour
+    def send_json(self, status, payload):
+        body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+        self.send_bytes(status, "application/json; charset=utf-8", body)
 
-    if passed_days > 3:
-        speak(f"{name}さん、おひさしぶりです")
-
-    else:
-        if hour < 4:
-            speak("通報しました")
-
-        elif hour < 12:
-            speak(f"{name}さん、おはようございます")
-
-        elif hour < 18:
-            speak(f"{name}さん、こんにちは")
-
+    def do_GET(self):
+        if self.path == "/" or self.path.startswith("/?"):
+            self.send_bytes(200, "text/html; charset=utf-8", PAGE.encode("utf-8"))
+        elif self.path == "/api/status":
+            with STATE_LOCK:
+                state = load_state()
+            self.send_json(200, state)
         else:
-            speak(f"{name}さん、こんばんは")
+            self.send_json(404, {"status": "not_found"})
+
+    def do_POST(self):
+        if self.path != "/api/events":
+            self.send_json(404, {"status": "not_found"})
+            return
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+            data = json.loads(self.rfile.read(length))
+            event = data.get("event")
+            name = data.get("name")
+            if event not in {"entry", "exit"} or not isinstance(name, str) or not name:
+                raise ValueError("event must be entry/exit and name is required")
+            state = update_status(event, name)
+            threading.Thread(target=blink_led, args=(event,), daemon=True).start()
+            self.send_json(200, {"status": "ok", "type": event, "data": state["people"]})
+        except (ValueError, json.JSONDecodeError) as error:
+            self.send_json(400, {"status": "error", "message": str(error)})
+
+    def log_message(self, format, *args):
+        print(f"[web] {self.address_string()} - {format % args}")
 
 
-app = FaceAnalysis(name='buffalo_l')
-app.prepare(ctx_id=0, det_size=(640, 640))
-
-# 全員分のベクトルを読み込む
-EMBEDDING_DIR = "embeddings"
-known_faces = {}
-name_list = {}
-engine=pyttsx3.init()
-voices=engine.getProperty('voices')
-engine.setProperty('voice',voices[0].id)
-engine.setProperty('rate',150)
-kidoubi=datetime.date.today()
-
-for filename in os.listdir(EMBEDDING_DIR):
-    if filename.endswith(".npy"):
-        name = os.path.splitext(filename)[0]
-        emb = np.load(os.path.join(EMBEDDING_DIR, filename))
-        known_faces[name] = emb
-
-cap = cv2.VideoCapture(1) #1→外部カメラ、0→内臓カメラ
-
-while True:
-    ret, frame = cap.read()
-    if not ret:
-        break
-
-    faces = app.get(frame)
-    for face in faces:
-        emb = face.embedding
-        best_match = "Unknown"
-        best_sim = 0
-
-        for name, known_emb in known_faces.items():
-            sim = np.dot(emb, known_emb) / (np.linalg.norm(emb) * np.linalg.norm(known_emb))
-            if sim > best_sim:
-                best_sim = sim
-                best_match = name
-                    
-        label = f"{best_match} ({best_sim:.2f})" if best_sim > 0.1 else "Unknown"
+def start_camera_processes():
+    env = os.environ.copy()
+    env["STATUS_API_URL"] = f"http://127.0.0.1:{PORT}/api/events"
+    return [
+        subprocess.Popen([sys.executable, str(PROJECT_DIR / script)], cwd=PROJECT_DIR, env=env)
+        for script in ("main_entry.py", "main_exit.py")
+    ]
 
 
-        
-        if best_sim < 0.4:
-            best_match = "Unknown"
-        
-        if best_match in name_list:
-            
-            send_entry(best_match) #GAS送信
+def stop_processes(processes):
+    for process in processes:
+        if process.poll() is None:
+            process.terminate()
+    for process in processes:
+        try:
+            process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            process.kill()
 
-            if name_list[best_match] != datetime.date.today():
-                passed_daytime=name_list[best_match]- datetime.date.today()
-                passed_days=passed_daytime.days
-                SendToSlackMessage(best_match,passed_days)
-                
-                name_list[best_match] = datetime.date.today()
 
-        else:
-            if best_match != "Unknown": #and kidoubi!=datetime.date.today():
-                name_list[best_match] = datetime.date.today()
-                SendToSlackMessage(best_match,0)
-                send_entry(best_match) #GAS送信
+def main():
+    server = ThreadingHTTPServer((HOST, PORT), StatusHandler)
+    processes = []
+    try:
+        processes = start_camera_processes()
+        print(f"Web page: http://127.0.0.1:{PORT}")
+        print("Press Ctrl+C to stop the server and both camera processes.")
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print("\nStopping...")
+    finally:
+        server.server_close()
+        stop_processes(processes)
 
-        box = face.bbox.astype(int)
-        cv2.rectangle(frame, (box[0], box[1]), (box[2], box[3]), (0, 255, 0), 2)
-        cv2.putText(frame, label, (box[0], box[1] - 10),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
 
-    cv2.imshow("Face Recognition", frame)
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
-
-cap.release()
-cv2.destroyAllWindows()
+if __name__ == "__main__":
+    main()
